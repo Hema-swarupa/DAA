@@ -1,0 +1,426 @@
+i want a project report for my compiler design first page should be intro page like the first one and my language name is henav and remove that an algorithmic music compiler . and submitted by Gondela Hema Swarupa 124cs0026 ,N.varshitha 124cs0047 . next include  
+1. Overview 
+Henav is a custom programming language designed and implemented as part of a Compiler Design 
+course. The language draws from C in terms of variable naming conventions and expression syntax, 
+but introduces a completely distinct set of keywords, control structures, and idioms. It supports five 
+primitive data types, two different loop constructs, user-defined functions with typed parameters and 
+return values, conditional branching, and basic I/O through print and scan statements. 
+The Henav compiler is built using the Flex and Bison toolchain with all semantic logic and intermediate 
+code generation (ICG) written in C. It implements all major front-end compilation phases: lexical 
+analysis, syntax analysis, semantic checking, and ICG — producing both three-address code (TAC) 
+and stack-machine instructions as output. Error detection is supported at all three phases with 
+descriptive messages for lexical, syntactic, and semantic violations. 
+2. Language Specification 
+2.1 Data Types 
+Henav is statically typed — every variable must be declared with an explicit type before use. Five 
+primitive data types are supported: 
+Type 
+Description 
+Example 
+int 
+Integer (whole) numbers 
+float 
+int count = 0; 
+Decimal / floating-point 
+bool 
+float pi = 3.14; 
+Boolean: true or false 
+char 
+bool flag = true; 
+Single character 
+char ch; 
+string 
+Sequence of characters 
+string name = "henav"; 
+2.2 Variables 
+Variable naming follows C conventions: identifiers must begin with a letter or underscore and may 
+contain letters, digits, and underscores (e.g. a, b, d3, d_3, myVar). Names are case-sensitive and 
+keywords are reserved. Three usage patterns are supported: 
+• Declaration:     int a; 
+• Assignment:      a = 10; 
+• Initialization:  int a = 10; 
+2.3 Operators 
+Henav provides a full operator set across four categories, following standard C precedence and 
+associativity: 
+Category 
+Operators 
+Arithmetic 
++   -   *   /   % 
+Relational 
+>   
+<   
+==   >=   <=   != 
+Logical 
+&&   ||   ! 
+Compound Assignment 
+=   
++=   -=   *=   /=   %= 
+2.4 Conditional Statements 
+Henav replaces if / else-if / else with three dedicated, readable keywords. All conditions support any 
+relational or logical expression. Only case_true is mandatory; the other two are optional: 
+• case_true  a > b  { print a }                -- executes when condition is true (if) 
+• case_false_if  a == b  { print "equal" }     
+• case_false  { print b }                      -- chained condition (else-if) -- fallback block (else) 
+2.5 Loops 
+Two loop constructs cover the most common iteration patterns. The range loop iterates a variable from 
+0 to n-1 with concise syntax: 
+• loop(i to n) { ... }     -- i = 0, 1, 2, ..., n-1 
+The conditional loop gives full C-style control with explicit initialization, condition, and increment: 
+• conditional_loop(int i = 0; i < 10; i += 1) { ... } 
+Inside any loop, stop exits immediately (like break) and skip jumps to the next iteration (like continue). 
+Using either outside a loop triggers a semantic error. 
+2.6 Functions 
+Functions are declared outside the main body using the block keyword with a typed parameter list. 
+They are called by name with a parenthesised argument list — literals and variables are both valid 
+arguments: 
+• block add(int a, int b) { return a + b; }   -- definition 
+• add(5, 6);    or    add(x, y);              
+2.7 Input / Output and Comments -- call 
+• print "label: " + varname;   -- outputs a string and a variable value 
+• scan varname;                
+• !! This is a comment         -- reads a value from standard input -- single-line, fully ignored by the compiler 
+3. Tools and Technologies 
+The Henav compiler uses the standard Unix compiler-construction toolchain. Flex and Bison handle the 
+declarative parts (tokenization and parsing) while C provides full control over semantic logic and code 
+generation: 
+Tool 
+Role in the Henav Compiler 
+Flex (Fast Lex) 
+Generates the lexical analyzer from regex rules in henav.l. 
+Converts source text into a token stream for the parser. 
+Bison (GNU YACC) 
+Generates the LALR(1) parser from BNF grammar in henav.y. 
+Hosts all semantic action code and ICG emission. 
+C Language 
+Implements the symbol table, function table, label context stacks, 
+all semantic checks, and ICG helper functions. 
+GCC 
+Compiles the Flex/Bison-generated C files and hand-written C into 
+the final executable compiler binary. 
+GNU Make 
+Automates the multi-step build in correct order: flex → bison → 
+gcc, with dependency tracking. 
+Flex and Bison were chosen because they are mature, industry-standard tools that produce efficient C 
+code integrating cleanly with hand-written logic. Writing semantic analysis and ICG directly in C 
+provided full control over critical data structures — particularly the symbol table, function table, and the 
+label/loop context stacks used for nested control flow. 
+4. Phases of Compiler Development 
+Phase 1 — Lexical Analysis  (henav.l, Flex) 
+The lexer is the first phase of the compiler, converting raw source text into a stream of typed tokens. It 
+recognizes all Henav keywords (start, int, float, bool, block, loop, case_true, case_false_if, case_false, 
+stop, skip, return, print, scan, to, conditional_loop), identifiers matching [a-zA-Z_][a-zA-Z0-9_]*, integer 
+and floating-point literals, double-quoted string literals, all arithmetic / relational / logical / assignment 
+operators, and punctuation. Comments beginning with !! are discarded entirely. Whitespace and 
+newlines are silently ignored. Any unmatched character triggers a 'Syntax Error: invalid token' message 
+and returns the YYUNDEF token. 
+Phase 2 — Syntax Analysis  (henav.y, Bison) 
+The parser validates the token stream against the Henav BNF grammar using an LALR(1) algorithm 
+generated by Bison. Grammar rules cover variable declarations and initializations, all expression forms 
+with explicit operator precedence and associativity declarations, conditional statements, range and 
+conditional loops, function definitions with typed parameter lists, return statements, and stop/skip within 
+loop bodies. To correctly handle nested control flow, two stacks are maintained at runtime: a label 
+context stack for nested if-blocks, and a loop label context stack for nested loops. Each stack saves the 
+enclosing block's labels before entering an inner block and restores them on exit, ensuring correct 
+branch targeting at any nesting depth. 
+Phase 3 — Semantic Analysis 
+Semantic checks are embedded as C code inside Bison grammar actions, running as each construct is 
+recognized. A symbol table of up to 100 entries stores each variable's name, type (int/float/bool 
+encoded as 0/1/2), initialization flag, current value (as a double to unify numeric types), and scope (0 = 
+global, 1 = function-local). The following checks are enforced at compile time: 
+• Undeclared variable — referencing a name not in the symbol table is a semantic error. 
+• Uninitialized variable — reading a variable before it has been assigned a value is flagged. 
+• Duplicate declaration — declaring the same name twice in the same scope is rejected. 
+• Division by zero — a literal zero divisor in / or % expressions triggers an immediate error. 
+• stop / skip outside a loop — the in_loop flag is checked; misuse produces a clear error 
+message. 
+• Scope cleanup — on function exit, all local variables (scope = 1) are removed from the table. 
+Phase 4 — Intermediate Code Generation (ICG) 
+The compiler produces two parallel forms of intermediate code from a single pass. Three-Address 
+Code (TAC) uses auto-generated temporaries (t1, t2, t3, ...) to hold subexpression results, emitting 
+instructions such as t1 = a + b, if t2 > 0 goto L1, and L1: label. Simultaneously, stack-machine 
+instructions are emitted: PUSH for constants, LOAD for variables, STORE for assignments, arithmetic 
+opcodes (ADD, SUB, MUL, DIV, MOD), comparison opcodes (GT, LT, EQ, GTE, LTE, NE), logical 
+opcodes (AND, OR, NOT), conditional jumps (JIF, GOTO), and function-call instructions (CALL, 
+RETURN). A constant folding optimization is also applied: when both operands of an arithmetic 
+expression are compile-time constants, the result is computed immediately and emitted directly rather 
+than generating a temporary and an operation. 
+Phase 5 — Function Handling 
+Functions require special treatment in a single-pass design. At definition time, the parser stores each 
+function's name, parameter names and types, complete body instruction sequence, and return 
+expression in a function table (up to 100 entries, each supporting up to 20 parameters). At call time, the 
+compiler looks up the function, binds the caller's argument values to parameter names by position, 
+replays the stored body instructions with parameter substitution applied, and evaluates the return 
+expression with the bound values to compute the result. This approach delivers correct function call 
+semantics — including parameterized calls and return values — without requiring a second pass over 
+the source. 
+5. Error Detection and Reporting 
+Henav detects and reports errors at all three front-end phases, giving the programmer precise 
+diagnostic information: 
+Phase 
+Error Handling Approach 
+Lexical 
+Unmatched characters print 'Syntax Error: invalid token <char>' 
+and return YYUNDEF, propagating as a syntax error to the parser. 
+Syntax 
+Bison calls yyerror(), printing 'Syntax Error: <message>' and 
+setting the global syntax_error flag. Parsing continues for further 
+diagnostics. 
+Semantic 
+Grammar actions print specific messages — e.g. 'Semantic Error: 
+x undeclared', 'Semantic Error: Div by zero', 'Semantic Error: stop 
+used outside loop' — and set the semantic_error flag. 
+6. Key Design Decisions & Conclusion 
+Key Design Decisions 
+• Custom keywords (case_true, block, loop, stop, skip) give Henav a distinct identity while 
+keeping structural logic familiar to anyone with C experience. 
+• bool literals true/false map to '1'/'0' strings in the lexer, letting booleans participate in arithmetic 
+without a separate evaluation code path. 
+• Two loop constructs — a concise range loop for 0-to-n counting and a full conditional loop for 
+general iteration — cover the vast majority of real use cases with clean syntax. 
+• Label context stacks (for if-blocks) and loop label context stacks correctly save and restore 
+branch targets across arbitrarily nested control structures, supporting deep nesting. 
+• Dual ICG output (TAC + stack instructions) demonstrates two complementary intermediate 
+representations produced in a single compiler pass, enriching the project as a learning exercise. 
+• A dual-scope symbol table (global = 0, local = 1) encoded as a simple integer field keeps scope 
+management lightweight and correct without complex data structures. 
+Conclusion 
+The Henav compiler is a complete, working implementation of a compiler front-end covering all five 
+major phases: lexical analysis, syntax analysis, semantic checking, intermediate code generation, and 
+function handling. Every core language feature — typed variables, four operator categories, conditional 
+branching, two loop forms, functions with typed parameters and return values, I/O, and comments — is 
+fully implemented and semantically validated. 
+Built entirely with Flex, Bison, and C, the project translates textbook compiler theory directly into a 
+functional, testable program. The deliberate design choices — unique keywords, readable conditional 
+syntax, dual loop constructs, dual ICG output — make Henav a cohesive and self-consistent language 
+rather than a stripped-down C imitation. The Henav compiler successfully demonstrates, end to end, all 
+the principles of compiler design covered in this course.  next  input output examples 
+arithmetic operations
+start {
+    int a;
+    int b;
+    int c;
+    int d;
+    int result;
+
+    a = 2;
+    b = 3;
+    c = 4;
+    d = 5;
+
+    result = a + b * c - d / a + (b + c) * d;
+
+    print result;
+}
+output
+Valid Program
+
+--- SYMBOL TABLE ---
+Name    Type    Init    Value
+a       int     1       2
+b       int     1       3
+c       int     1       4
+d       int     1       5
+result  int     1       0
+
+--- STACK CODE GENERATION (UNOPTIMIZED) ---
+   0: PUSH 2
+   1: STORE a
+   2: PUSH 3
+   3: STORE b
+   4: PUSH 4
+   5: STORE c
+   6: PUSH 5
+   7: STORE d
+   8: LOAD a
+   9: LOAD b
+  10: LOAD c
+  11: MUL
+  12: ADD
+  13: LOAD d
+  14: LOAD a
+  15: DIV
+  16: SUB
+  17: LOAD b
+  18: LOAD c
+  19: ADD
+  20: LOAD d
+  21: MUL
+  22: ADD
+  23: STORE result
+  24: LOAD result
+  25: PRINT
+
+--- PROGRAM EXECUTION OUTPUT ---
+47
+relational operator
+question
+start {
+    int i;
+
+    conditional_loop (i = 1; i <= 5; i = i + 1) {
+        case_true (i >= 3) {
+            print i;
+        }
+    }
+}
+output
+--- SYMBOL TABLE ---
+Name    Type    Init    Value
+i       int     1       1
+
+--- STACK CODE GENERATION (UNOPTIMIZED) ---
+   0: PUSH 1
+   1: STORE i
+   2: LABEL L1
+   3: LOAD i
+   4: PUSH 5
+   5: LTE
+   6: JZ L3
+   7: LOAD i
+   8: PUSH 3
+   9: GTE
+  10: JZ L4
+  11: LOAD i
+  12: PRINT
+  13: JMP L5
+  14: LABEL L4
+  15: LABEL L5
+  16: LABEL L2
+  17: LOAD i
+  18: PUSH 1
+  19: ADD
+  20: STORE i
+  21: JMP L1
+  22: LABEL L3
+
+--- PROGRAM EXECUTION OUTPUT ---
+3
+4
+5
+logical operator input
+start {
+    int i;
+
+    conditional_loop (i = 1; i <= 5; i = i + 1) {
+        case_true (i > 2 && i < 5) {
+            print i;
+        }
+    }
+}
+logical operator output
+--- SYMBOL TABLE ---
+Name    Type    Init    Value
+i       int     1       1
+
+--- STACK CODE GENERATION (UNOPTIMIZED) ---
+   0: PUSH 1
+   1: STORE i
+   2: LABEL L1
+   3: LOAD i
+   4: PUSH 5
+   5: LTE
+   6: JZ L3
+   7: LOAD i
+   8: PUSH 2
+   9: GT
+  10: LOAD i
+  11: PUSH 5
+  12: LT
+  13: AND
+  14: JZ L4
+  15: LOAD i
+  16: PRINT
+  17: JMP L5
+  18: LABEL L4
+  19: LABEL L5
+  20: LABEL L2
+  21: LOAD i
+  22: PUSH 1
+  23: ADD
+  24: STORE i
+  25: JMP L1
+  26: LABEL L3
+
+--- PROGRAM EXECUTION OUTPUT ---
+3
+4
+loop input
+start {
+    int i;
+    int n;
+
+    n = 5;
+
+    loop (i to n) {
+        print i;
+    }
+}
+loop output
+--- SYMBOL TABLE ---
+Name    Type    Init    Value
+i       int     0       0
+n       int     1       5
+
+--- STACK CODE GENERATION (UNOPTIMIZED) ---
+   0: PUSH 5
+   1: STORE n
+   2: LOAD n
+   3: LABEL L1
+   4: LOAD i
+   5: LOAD n
+   6: LT
+   7: JZ L3
+   8: LOAD i
+   9: PRINT
+  10: LABEL L2
+  11: LOAD i
+  12: PUSH 1
+  13: ADD
+  14: STORE i
+  15: JMP L1
+  16: LABEL L3
+
+--- PROGRAM EXECUTION OUTPUT ---
+0
+1
+2
+3
+4
+conditional_loop input
+start {
+    int i;
+
+    conditional_loop (i = 1; i <= 5; i = i + 1) {
+        print i;
+    }
+}
+conditional_loop output
+--- SYMBOL TABLE ---
+Name    Type    Init    Value
+i       int     1       1
+
+--- STACK CODE GENERATION (UNOPTIMIZED) ---
+   0: PUSH 1
+   1: STORE i
+   2: LABEL L1
+   3: LOAD i
+   4: PUSH 5
+   5: LTE
+   6: JZ L3
+   7: LOAD i
+   8: PRINT
+   9: LABEL L2
+  10: LOAD i
+  11: PUSH 1
+  12: ADD
+  13: STORE i
+  14: JMP L1
+  15: LABEL L3
+
+--- PROGRAM EXECUTION OUTPUT ---
+1
+2
+3
+4
+5
+
